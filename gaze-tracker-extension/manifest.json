@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "EyeTracker Pro",
+  "version": "1.0",
+  "permissions": ["offscreen", "storage", "activeTab"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ]
+}
