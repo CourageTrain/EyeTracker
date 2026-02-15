@@ -1,9 +1,13 @@
 let mediaStream = null;
 
+console.log('Offscreen document loaded');
+
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+  console.log('Offscreen: Received message:', request.action);
+  
   if (request.action === 'requestCamera') {
     try {
-      console.log('Requesting camera access from offscreen...');
+      console.log('Offscreen: Requesting camera access...');
       
       mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -13,19 +17,26 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         audio: false
       });
       
-      console.log('✓ Camera access granted in offscreen');
+      console.log('✓ Offscreen: Camera access granted');
       sendResponse({success: true});
       
     } catch (err) {
-      console.error('✗ Camera access failed:', err);
+      console.error('✗ Offscreen: Camera access failed:', err.name, err.message);
       sendResponse({success: false, error: err.message});
     }
   } else if (request.action === 'releaseCamera') {
+    console.log('Offscreen: Releasing camera');
     if (mediaStream) {
-      mediaStream.getTracks().forEach(track => track.stop());
+      mediaStream.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind);
+        track.stop();
+      });
       mediaStream = null;
-      console.log('Camera released');
     }
     sendResponse({success: true});
   }
+  
+  return true;
 });
+
+console.log('Offscreen listeners registered');

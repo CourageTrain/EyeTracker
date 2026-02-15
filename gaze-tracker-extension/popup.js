@@ -6,22 +6,24 @@ const errorMessage = document.getElementById('errorMessage');
 let cameraGranted = false;
 
 startBtn.addEventListener('click', () => {
-  console.log('Start button clicked');
+  console.log('🔴 Start button clicked');
   requestCameraViaOffscreen();
 });
 
 stopBtn.addEventListener('click', () => {
-  console.log('Stop button clicked');
+  console.log('🛑 Stop button clicked');
   
   // Release camera
-  chrome.runtime.sendMessage({action: 'releaseCamera'}, () => {});
+  chrome.runtime.sendMessage({action: 'releaseCamera'}, (response) => {
+    console.log('Camera release response:', response);
+  });
   
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
     if (!tabs[0]) return;
     
     chrome.tabs.sendMessage(tabs[0].id, {action: 'stopTracking'}, (response) => {
       if (chrome.runtime.lastError) {
-        console.error('Error stopping tracking:', chrome.runtime.lastError);
+        console.error('❌ Error stopping tracking:', chrome.runtime.lastError);
         return;
       }
       
@@ -37,14 +39,16 @@ stopBtn.addEventListener('click', () => {
 });
 
 function requestCameraViaOffscreen() {
-  console.log('Requesting camera via offscreen document...');
+  console.log('📹 Requesting camera via background...');
   
   chrome.runtime.sendMessage(
     {action: 'requestCamera'},
     (response) => {
+      console.log('📹 Camera response received:', response);
+      
       if (chrome.runtime.lastError) {
-        console.error('Offscreen error:', chrome.runtime.lastError);
-        showError('Failed to access camera. Check Chrome permissions.');
+        console.error('❌ Background error:', chrome.runtime.lastError.message);
+        showError('Background error: ' + chrome.runtime.lastError.message);
         return;
       }
       
@@ -53,7 +57,7 @@ function requestCameraViaOffscreen() {
         cameraGranted = true;
         startEyeTrackingOnTab();
       } else {
-        console.error('Camera denied:', response?.error);
+        console.error('❌ Camera denied:', response?.error);
         showError('Camera access denied: ' + (response?.error || 'Unknown error'));
       }
     }
@@ -61,7 +65,7 @@ function requestCameraViaOffscreen() {
 }
 
 function startEyeTrackingOnTab() {
-  console.log('Starting eye tracking on active tab...');
+  console.log('👁️ Starting eye tracking on active tab...');
   
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
     if (!tabs[0]) {
@@ -69,11 +73,11 @@ function startEyeTrackingOnTab() {
       return;
     }
     
-    console.log('Active tab:', tabs[0].url);
+    console.log('Tab URL:', tabs[0].url);
     
     chrome.tabs.sendMessage(tabs[0].id, {action: 'startTracking'}, (response) => {
       if (chrome.runtime.lastError) {
-        console.error('Chrome runtime error:', chrome.runtime.lastError.message);
+        console.error('❌ Content script error:', chrome.runtime.lastError.message);
         showError('Failed to connect to page. Refresh and try again.');
         return;
       }
@@ -85,10 +89,10 @@ function startEyeTrackingOnTab() {
         stopBtn.disabled = false;
         hideError();
       } else if (response && response.error) {
-        console.error('Tracking error:', response.error);
+        console.error('❌ Tracking error:', response.error);
         showError(response.error);
       } else {
-        console.error('No response from content script');
+        console.error('❌ No response from content script');
         showError('Failed to start tracking. Refresh and try again.');
       }
     });
@@ -122,7 +126,7 @@ function resetGazeData() {
 }
 
 function showError(message) {
-  console.error('Error:', message);
+  console.error('🚨 Error:', message);
   errorMessage.textContent = '❌ ' + message;
   errorMessage.style.display = 'block';
 }

@@ -7,7 +7,8 @@
     "tabs",
     "scripting",
     "activeTab",
-    "storage"
+    "storage",
+    "offscreen"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -28,12 +29,6 @@
       "matches": ["<all_urls>"],
       "js": ["webgazer-setup.js", "content.js"],
       "run_at": "document_start"
-    }
-  ],
-  "offscreen_documents": [
-    {
-      "document": "offscreen.html",
-      "reasons": ["USER_MEDIA"]
     }
   ]
 }
