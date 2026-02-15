@@ -7,23 +7,98 @@ let cameraGranted = false;
 
 startBtn.addEventListener('click', () => {
   console.log('🔴 Start button clicked');
-  requestCameraViaOffscreen();
+  startTracking();
 });
 
 stopBtn.addEventListener('click', () => {
   console.log('🛑 Stop button clicked');
-  
-  // Release camera
-  chrome.runtime.sendMessage({action: 'releaseCamera'}, (response) => {
-    console.log('Camera release response:', response);
-  });
+  stopTracking();
+});
+
+async function startTracking() {
+  try {
+    console.log('📹 Requesting camera access from popup...');
+    updateStatus('Requesting camera...', 'tracking');
+    
+    // Request camera access directly from popup
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 320 },
+        height: { ideal: 240 }
+      },
+      audio: false
+    });
+    
+    console.log('✅ Camera access granted!');
+    
+    // Stop the stream - we just needed to request permission
+    stream.getTracks().forEach(track => track.stop());
+    
+    cameraGranted = true;
+    
+    // Now start tracking on the webpage
+    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+      if (!tabs[0]) {
+        showError('No active tab found');
+        return;
+      }
+      
+      console.log('👁️ Starting eye tracking on tab:', tabs[0].url);
+      
+      chrome.tabs.sendMessage(tabs[0].id, {action: 'startTracking'}, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('❌ Content script error:', chrome.runtime.lastError.message);
+          showError('Failed to start tracking. Refresh the page and try again.');
+          return;
+        }
+        
+        if (response && response.success) {
+          console.log('✓ Tracking started successfully');
+          updateStatus('Tracking...', 'tracking');
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+          hideError();
+        } else if (response && response.error) {
+          console.error('❌ Tracking error:', response.error);
+          showError(response.error);
+        } else {
+          console.error('❌ No response from content script');
+          showError('Failed to start tracking. Refresh the page and try again.');
+        }
+      });
+    });
+    
+  } catch (err) {
+    console.error('❌ Camera access failed:', err.name, err.message);
+    
+    if (err.name === 'NotAllowedError') {
+      showError(
+        'Camera permission denied.\n\n' +
+        'To fix this:\n' +
+        '1. Click the camera icon in the address bar\n' +
+        '2. Change camera permission to "Allow"\n' +
+        '3. Reload and try again'
+      );
+    } else if (err.name === 'NotFoundError') {
+      showError('No camera found on this device');
+    } else {
+      showError('Camera error: ' + err.message);
+    }
+    
+    updateStatus('Error', 'ready');
+    startBtn.disabled = false;
+  }
+}
+
+function stopTracking() {
+  console.log('🛑 Stopping tracking...');
   
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
     if (!tabs[0]) return;
     
     chrome.tabs.sendMessage(tabs[0].id, {action: 'stopTracking'}, (response) => {
       if (chrome.runtime.lastError) {
-        console.error('❌ Error stopping tracking:', chrome.runtime.lastError);
+        console.error('Error stopping tracking:', chrome.runtime.lastError);
         return;
       }
       
@@ -33,75 +108,6 @@ stopBtn.addEventListener('click', () => {
         stopBtn.disabled = true;
         resetGazeData();
         cameraGranted = false;
-      }
-    });
-  });
-});
-
-function requestCameraViaOffscreen() {
-  console.log('📹 Requesting camera via background...');
-  
-  chrome.runtime.sendMessage(
-    {action: 'requestCamera'},
-    (response) => {
-      console.log('📹 Camera response received:', response);
-      
-      if (chrome.runtime.lastError) {
-        console.error('❌ Background error:', chrome.runtime.lastError.message);
-        showError('Background error: ' + chrome.runtime.lastError.message);
-        return;
-      }
-      
-      if (response && response.success) {
-        console.log('✓ Camera access granted');
-        cameraGranted = true;
-        startEyeTrackingOnTab();
-      } else if (response && response.errorName === 'NotAllowedError') {
-        console.error('❌ Camera permission denied');
-        showError(
-          'Camera permission denied. Please:\n' +
-          '1. Go to chrome://settings/content/camera\n' +
-          '2. Find this extension and set to "Allow"\n' +
-          '3. Try again'
-        );
-      } else {
-        console.error('❌ Camera denied:', response?.error);
-        showError('Camera access denied: ' + (response?.error || 'Unknown error'));
-      }
-    }
-  );
-}
-
-function startEyeTrackingOnTab() {
-  console.log('👁️ Starting eye tracking on active tab...');
-  
-  chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-    if (!tabs[0]) {
-      showError('No active tab found');
-      return;
-    }
-    
-    console.log('Tab URL:', tabs[0].url);
-    
-    chrome.tabs.sendMessage(tabs[0].id, {action: 'startTracking'}, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error('❌ Content script error:', chrome.runtime.lastError.message);
-        showError('Failed to connect to page. Refresh and try again.');
-        return;
-      }
-      
-      if (response && response.success) {
-        console.log('✓ Tracking started successfully');
-        updateStatus('Tracking...', 'tracking');
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        hideError();
-      } else if (response && response.error) {
-        console.error('❌ Tracking error:', response.error);
-        showError(response.error);
-      } else {
-        console.error('❌ No response from content script');
-        showError('Failed to start tracking. Refresh and try again.');
       }
     });
   });
