@@ -1,14 +1,25 @@
-// Load WebGazer library from CDN into the page context
-(function() {
+// Wait for document to be ready then load WebGazer
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadWebGazer);
+} else {
+  loadWebGazer();
+}
+
+function loadWebGazer() {
   if (window.webgazer) return;
   
   const script = document.createElement('script');
+  script.async = true;
   script.src = 'https://webgazer.cs.brown.edu/webgazer.js';
+  
   script.onload = () => {
-    console.log('WebGazer library loaded successfully from CDN');
+    console.log('✓ WebGazer loaded from CDN');
+    window.dispatchEvent(new Event('webgazer-loaded'));
   };
+  
   script.onerror = () => {
-    console.error('Failed to load WebGazer library from CDN');
+    console.error('✗ Failed to load WebGazer from CDN');
   };
+  
   document.head.appendChild(script);
-})();
+}

@@ -1,34 +1,48 @@
 let isTracking = false;
 let webgazerInitialized = false;
-let animationFrameId = null;
 
-// Wait for WebGazer to be available
-function waitForWebGazer(callback) {
-  if (window.webgazer) {
-    callback();
-  } else {
-    setTimeout(() => waitForWebGazer(callback), 100);
-  }
+function waitForWebGazer(maxAttempts = 30) {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    
+    const checkWebGazer = setInterval(() => {
+      attempts++;
+      console.log(`Checking for WebGazer... attempt ${attempts}`);
+      
+      if (window.webgazer) {
+        clearInterval(checkWebGazer);
+        console.log('✓ WebGazer found!');
+        resolve();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkWebGazer);
+        reject(new Error('WebGazer failed to load after 30 attempts'));
+      }
+    }, 200);
+  });
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'startTracking') {
-    if (!isTracking) {
-      startEyeTracking();
+    startEyeTracking().then(() => {
       sendResponse({success: true});
-    }
+    }).catch(err => {
+      console.error('Start tracking error:', err);
+      sendResponse({success: false, error: err.message});
+    });
+    return true; // Keep message channel open
   } else if (request.action === 'stopTracking') {
-    if (isTracking) {
-      stopEyeTracking();
-      sendResponse({success: true});
-    }
+    stopEyeTracking();
+    sendResponse({success: true});
   }
 });
 
-function startEyeTracking() {
+async function startEyeTracking() {
   isTracking = true;
   
-  waitForWebGazer(() => {
+  try {
+    console.log('Waiting for WebGazer...');
+    await waitForWebGazer();
+    
     if (webgazerInitialized) {
       console.log('Resuming WebGazer');
       window.webgazer.resume();
@@ -36,42 +50,35 @@ function startEyeTracking() {
       return;
     }
 
-    // Initialize WebGazer with default settings
-    window.webgazer
+    console.log('Initializing WebGazer...');
+    
+    await window.webgazer
       .setRegression('ridge')
       .setTracker('clmtrackr')
-      .begin()
-      .then(() => {
-        console.log('WebGazer initialized successfully');
-        webgazerInitialized = true;
-        
-        // Set up gaze prediction callback
-        window.webgazer.setGazeListener((data, elapsedTime) => {
-          if (data == null) return;
-          
-          // Send gaze data to popup
-          chrome.runtime.sendMessage({
-            action: 'updateGaze',
-            x: data.x,
-            y: data.y,
-            confidence: data.confidence || 0
-          }).catch(() => {
-            // Silently handle errors when popup is not open
-          });
-        });
-        
-        // Show gaze cursor on page
-        showGazeCursor();
-      })
-      .catch(err => {
-        console.error('WebGazer initialization failed:', err);
-        isTracking = false;
-        chrome.runtime.sendMessage({
-          action: 'trackingError',
-          error: 'WebGazer failed to initialize: ' + err.message
-        }).catch(() => {});
-      });
-  });
+      .begin();
+    
+    console.log('✓ WebGazer initialized successfully');
+    webgazerInitialized = true;
+    
+    // Set up gaze prediction callback
+    window.webgazer.setGazeListener((data, elapsedTime) => {
+      if (data == null) return;
+      
+      chrome.runtime.sendMessage({
+        action: 'updateGaze',
+        x: data.x,
+        y: data.y,
+        confidence: data.confidence || 0
+      }).catch(() => {});
+    });
+    
+    showGazeCursor();
+    
+  } catch (err) {
+    console.error('WebGazer initialization failed:', err);
+    isTracking = false;
+    throw err;
+  }
 }
 
 function stopEyeTracking() {
@@ -81,15 +88,9 @@ function stopEyeTracking() {
     window.webgazer.pause();
   }
   
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
-  
-  // Remove gaze cursor
   removeGazeCursor();
 }
 
-// Visual gaze cursor
 function showGazeCursor() {
   if (document.getElementById('webgazer-cursor')) return;
   
@@ -109,7 +110,6 @@ function showGazeCursor() {
   `;
   document.body.appendChild(cursor);
   
-  // Update cursor position with gaze data
   window.webgazer.setGazeListener((data, elapsedTime) => {
     if (data == null) return;
     
@@ -129,20 +129,14 @@ function removeGazeCursor() {
   }
 }
 
-// Handle page visibility changes
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && isTracking) {
-    if (window.webgazer) {
-      window.webgazer.pause();
-    }
-  } else if (!document.hidden && isTracking) {
-    if (window.webgazer) {
-      window.webgazer.resume();
-    }
+  if (document.hidden && isTracking && window.webgazer) {
+    window.webgazer.pause();
+  } else if (!document.hidden && isTracking && window.webgazer) {
+    window.webgazer.resume();
   }
 });
 
-// Clean up on page unload
 window.addEventListener('beforeunload', () => {
   if (window.webgazer && webgazerInitialized) {
     window.webgazer.end();

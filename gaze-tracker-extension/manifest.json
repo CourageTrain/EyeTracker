@@ -29,5 +29,11 @@
       "js": ["webgazer-setup.js", "content.js"],
       "run_at": "document_start"
     }
+  ],
+  "offscreen_documents": [
+    {
+      "document": "offscreen.html",
+      "reasons": ["USER_MEDIA"]
+    }
   ]
 }
