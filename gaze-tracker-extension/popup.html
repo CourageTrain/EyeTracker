@@ -1,8 +1,25 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
 <body>
-  <h3>Gaze Tracker</h3>
-  <button id="start-btn">Enable Camera</button>
+  <div class="container">
+    <h1>Eye Tracker</h1>
+    
+    <button id="startBtn" class="button">Start Tracking</button>
+    <button id="stopBtn" class="button" disabled>Stop Tracking</button>
+    
+    <div id="status" class="status">Ready</div>
+    
+    <div id="gazeData" class="gaze-data">
+      <p>X: <span id="gazeX">--</span></p>
+      <p>Y: <span id="gazeY">--</span></p>
+      <p>Confidence: <span id="confidence">--</span></p>
+    </div>
+  </div>
+  
   <script src="popup.js"></script>
 </body>
 </html>
