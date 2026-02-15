@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Eye Tracker",
+  "name": "Eye Tracker with WebGazer",
   "version": "1.0",
-  "description": "Track eye gaze on web pages",
+  "description": "Track eye gaze on web pages using WebGazer.js",
   "permissions": [
     "tabs",
     "scripting",
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -25,8 +26,14 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["webgazer-setup.js", "content.js"],
       "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/webgazer.js"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

@@ -6,17 +6,43 @@
 </head>
 <body>
   <div class="container">
-    <h1>Eye Tracker</h1>
+    <h1>👁️ Eye Tracker</h1>
     
-    <button id="startBtn" class="button">Start Tracking</button>
-    <button id="stopBtn" class="button" disabled>Stop Tracking</button>
+    <div class="control-section">
+      <button id="startBtn" class="button button-start">Start Tracking</button>
+      <button id="stopBtn" class="button button-stop" disabled>Stop Tracking</button>
+    </div>
     
-    <div id="status" class="status">Ready</div>
+    <div id="status" class="status status-ready">
+      <span class="status-dot"></span>
+      Ready
+    </div>
     
     <div id="gazeData" class="gaze-data">
-      <p>X: <span id="gazeX">--</span></p>
-      <p>Y: <span id="gazeY">--</span></p>
-      <p>Confidence: <span id="confidence">--</span></p>
+      <div class="gaze-item">
+        <label>X Position:</label>
+        <span id="gazeX" class="value">--</span>px
+      </div>
+      <div class="gaze-item">
+        <label>Y Position:</label>
+        <span id="gazeY" class="value">--</span>px
+      </div>
+      <div class="gaze-item">
+        <label>Confidence:</label>
+        <span id="confidence" class="value">--</span>%
+      </div>
+    </div>
+
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    
+    <div class="info-section">
+      <h3>ℹ️ Instructions</h3>
+      <ul>
+        <li>Click "Start Tracking" to begin</li>
+        <li>Allow camera access when prompted</li>
+        <li>Position yourself well-lit in front of camera</li>
+        <li>A red circle will show where you're looking</li>
+      </ul>
     </div>
   </div>
   
