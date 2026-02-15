@@ -56,6 +56,14 @@ function requestCameraViaOffscreen() {
         console.log('✓ Camera access granted');
         cameraGranted = true;
         startEyeTrackingOnTab();
+      } else if (response && response.errorName === 'NotAllowedError') {
+        console.error('❌ Camera permission denied');
+        showError(
+          'Camera permission denied. Please:\n' +
+          '1. Go to chrome://settings/content/camera\n' +
+          '2. Find this extension and set to "Allow"\n' +
+          '3. Try again'
+        );
       } else {
         console.error('❌ Camera denied:', response?.error);
         showError('Camera access denied: ' + (response?.error || 'Unknown error'));

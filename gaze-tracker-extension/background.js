@@ -11,21 +11,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Background: Requesting camera via offscreen');
     
     // Create or get offscreen document
-    createOffscreenDocument().then(() => {
-      console.log('Background: Offscreen document ready, requesting camera');
-      
-      // Send message to offscreen document
-      chrome.runtime.sendMessage(
-        {action: 'requestCamera'},
-        (response) => {
-          console.log('Background: Camera response:', response);
-          sendResponse(response);
-        }
-      );
-    }).catch(err => {
-      console.error('Background: Failed to create offscreen:', err);
-      sendResponse({success: false, error: err.message});
-    });
+    createOffscreenDocument()
+      .then(() => {
+        console.log('Background: Offscreen document ready, requesting camera');
+        
+        // Send message to offscreen document and wait for response
+        return new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage(
+            {action: 'requestCamera'},
+            (response) => {
+              if (chrome.runtime.lastError) {
+                console.error('Background: Chrome error:', chrome.runtime.lastError);
+                reject(chrome.runtime.lastError);
+              } else {
+                console.log('Background: Camera response:', response);
+                resolve(response);
+              }
+            }
+          );
+        });
+      })
+      .then((response) => {
+        sendResponse(response);
+      })
+      .catch((err) => {
+        console.error('Background: Error:', err);
+        sendResponse({success: false, error: err.message});
+      });
     
     return true; // Keep channel open
     
@@ -35,7 +47,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.runtime.sendMessage(
       {action: 'releaseCamera'},
       (response) => {
-        sendResponse(response);
+        if (chrome.runtime.lastError) {
+          console.error('Background: Release error:', chrome.runtime.lastError);
+        }
+        sendResponse(response || {success: true});
       }
     );
     return true;
@@ -73,6 +88,7 @@ async function createOffscreenDocument() {
   
   return chrome.offscreen.createDocument({
     url: chrome.runtime.getURL('offscreen.html'),
-    reasons: ['USER_MEDIA']
+    reasons: ['USER_MEDIA'],
+    justification: 'Access camera for eye tracking functionality'
   });
 }
